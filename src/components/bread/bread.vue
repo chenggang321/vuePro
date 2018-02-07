@@ -16,7 +16,7 @@
 </script>
 
 <style rel="stylesheet">
-  nav-breadcrumb-wrap {
+  .nav-breadcrumb-wrap {
     background: #f0f0f0;
   }
 

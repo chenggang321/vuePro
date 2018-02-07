@@ -4,8 +4,8 @@
       <div class="container">
         <div class="filter-nav">
           <span class="sortby">排序:</span>
-          <a href="javascript:void(0)" class="default cur">默认</a>
-          <a href="javascript:void(0)" class="price">价格
+          <a href="javascript:void(0)" class="default" :class="{'cur':sortFlag}" @click="defaultSort()">默认</a>
+          <a href="javascript:void(0)" class="price" :class="{'cur':!sortFlag}" @click="sortGoods()">价格
             <svg class="icon icon-arrow-short">
               <use xlink:href="#icon-arrow-short"></use>
             </svg>
@@ -17,9 +17,14 @@
           <div class="filter" id="filter">
             <dl class="filter-price">
               <dt>价格区间:</dt>
-              <dd><a href="javascript:void(0)">选择价格</a></dd>
-              <dd>
-                <a href="javascript:void(0)">￥ 0 - 100 元</a>
+              <dd><a href="javascript:void(0)" :class="{'cur':priceChecked=='all'}"
+                     @click="setPriceFilter('all')">选择价格</a></dd>
+              <dd
+                v-for="(item,index) in priceFilter"
+                :key="item.id"
+              >
+                <a href="javascript:void(0)" :class="{'cur':priceChecked===index}"
+                   @click="setPriceFilter(index)">{{item.startPrice}}-{{item.endPrice}}元</a>
               </dd>
             </dl>
           </div>
@@ -28,19 +33,29 @@
           <div class="accessory-list-wrap">
             <div class="accessory-list col-4">
               <ul>
-                <li v-for="item in goodsList">
+                <li
+                  v-for="item in goodsList"
+                  :key="item.id"
+                >
                   <div class="pic">
-                    <a href="#"><img :src="'/static/img/'+ item.productImage" alt=""></a>
+                    <a href="#"><img v-lazy="'/static/img/'+ item.productImage" alt=""></a>
                   </div>
                   <div class="main">
                     <div class="name">{{item.productName}}</div>
-                    <div class="price">{{item.salePrice}}</div>
+                    <div class="price">{{'￥' + item.salePrice}}</div>
                     <div class="btn-area">
                       <a href="javascript:;" class="btn btn--m">加入购物车</a>
                     </div>
                   </div>
                 </li>
               </ul>
+            </div>
+            <!-- loading more -->
+            <div class="view-more-normal"
+                 v-infinite-scroll="loadMore"
+                 infinite-scroll-disabled="busy"
+                 infinite-scroll-distance="20">
+              <img src="./loading-svg/loading-spinning-bubbles.svg" v-show="loading">
             </div>
           </div>
         </div>
@@ -55,18 +70,95 @@
   export default{
     data () {
       return {
-        goodsList: []
+        goodsList: [],
+        priceFilter: [
+          {
+            startPrice: '0.00',
+            endPrice: '100.00'
+          },
+          {
+            startPrice: '100.00',
+            endPrice: '500.00'
+          },
+          {
+            startPrice: '500.00',
+            endPrice: '1000.00'
+          },
+          {
+            startPrice: '1000.00',
+            endPrice: '2000.00'
+          },
+          {
+            startPrice: '2000.00',
+            endPrice: '3000.00'
+          },
+          {
+            startPrice: '3000.00',
+            endPrice: '6000.00'
+          }
+        ],
+        sortFlag: true, // 排序
+        busy: true,
+        page: 1,
+        pageSize: 8,
+        priceChecked: 'all',
+        loading: false
       }
     },
     mounted () {
       this.getGoodsListData()
     },
     methods: {
-      getGoodsListData () {
-        axios.get('/api/appData').then((result) => {
-          this.goodsList = result.data.data.result
-          console.log(this.goodsList)
+      getGoodsListData (flag) {
+        var params = {
+          page: this.page,
+          pageSize: this.pageSize,
+          sort: this.sortFlag ? 1 : -1,
+          priceLevel: this.priceChecked
+        };
+        this.loading = true;
+        axios.get('/goods', {
+          params: params
+        }).then((result) => {
+          this.loading = false;
+          if (flag) {
+            // 多次加载数据
+            this.goodsList = this.goodsList.concat(result.data.result);
+            if (result.data.result.length === 0) {
+              this.busy = true;
+            } else {
+              this.busy = false;
+            }
+          } else {
+            // 第一次加载数据
+            this.goodsList = result.data.result;
+            // 当第一次加载数据完之后，把这个滚动到底部的函数触发打开
+            this.busy = false;
+          }
         })
+      },
+      loadMore: function () {
+        this.busy = true;
+        // 多次加载数据
+        setTimeout(() => {
+          this.page++;
+          this.getGoodsListData(true);
+        }, 1000);
+      },
+      defaultSort () {
+        this.sortFlag = true;
+        this.page = 1;
+        this.getGoodsListData();
+      },
+      sortGoods () {
+        this.sortFlag = false;
+        this.page = 1;
+        this.getGoodsListData();
+      },
+      setPriceFilter (index) {
+        this.priceChecked = index;
+        this.page = 1;
+        this.getGoodsListData();
       }
     }
   }

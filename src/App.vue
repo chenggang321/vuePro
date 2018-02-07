@@ -1,7 +1,9 @@
 <template>
   <div id="app">
     <v-header></v-header>
-    <v-bread></v-bread>
+    <v-bread>
+      <span>商品列表</span>
+    </v-bread>
     <router-view/>
     <v-footer></v-footer>
   </div>
