@@ -1,6 +1,8 @@
 # vue2-shop
 
-> this is shop
+> 这是基于vue的购物网站，前台采用了vue-cli+webpack+axios+
+> vue-infinite-scroll+vue-lazyload+vue-router，
+> 后台：express+mongoose
 
 ## Build Setup
 
