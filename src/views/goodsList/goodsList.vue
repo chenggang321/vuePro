@@ -1,73 +1,87 @@
 <template>
-  <div class="goodsList">
-    <div class="accessory-result-page">
-      <div class="container">
-        <div class="filter-nav">
-          <span class="sortby">排序:</span>
-          <a href="javascript:void(0)" class="default" :class="{'cur':sortFlag}" @click="defaultSort()">默认</a>
-          <a href="javascript:void(0)" class="price" :class="{'cur':!sortFlag}" @click="sortGoods()">价格
-            <svg class="icon icon-arrow-short">
-              <use xlink:href="#icon-arrow-short"></use>
-            </svg>
-          </a>
-          <a href="javascript:void(0)" class="filterby">筛选</a>
-        </div>
-        <div class="accessory-result">
-          <!-- filter -->
-          <div class="filter" id="filter">
-            <dl class="filter-price">
-              <dt>价格区间:</dt>
-              <dd><a href="javascript:void(0)" :class="{'cur':priceChecked=='all'}"
-                     @click="setPriceFilter('all')">选择价格</a></dd>
-              <dd
-                v-for="(item,index) in priceFilter"
-                :key="item.id"
-              >
-                <a href="javascript:void(0)" :class="{'cur':priceChecked===index}"
-                   @click="setPriceFilter(index)">{{item.startPrice}}-{{item.endPrice}}元</a>
-              </dd>
-            </dl>
+  <div>
+    <v-header></v-header>
+    <v-bread>
+      <span>商品列表</span>
+    </v-bread>
+    <div class="goodsList">
+      <div class="accessory-result-page">
+        <div class="container">
+          <div class="filter-nav">
+            <span class="sortby">排序:</span>
+            <a href="javascript:void(0)" class="default" :class="{'cur':sortFlag}" @click="defaultSort()">默认</a>
+            <a href="javascript:void(0)" class="price" :class="{'cur':!sortFlag}" @click="sortGoods()">价格
+              <svg class="icon icon-arrow-short">
+                <use xlink:href="#icon-arrow-short"></use>
+              </svg>
+            </a>
+            <a href="javascript:void(0)" class="filterby">筛选</a>
           </div>
-
-          <!-- search result accessories list -->
-          <div class="accessory-list-wrap">
-            <div class="accessory-list col-4">
-              <ul>
-                <li
-                  v-for="item in goodsList"
+          <div class="accessory-result">
+            <!-- filter -->
+            <div class="filter" id="filter">
+              <dl class="filter-price">
+                <dt>价格区间:</dt>
+                <dd><a href="javascript:void(0)" :class="{'cur':priceChecked=='all'}"
+                       @click="setPriceFilter('all')">选择价格</a></dd>
+                <dd
+                  v-for="(item,index) in priceFilter"
                   :key="item.id"
                 >
-                  <div class="pic">
-                    <a href="#"><img v-lazy="'/static/img/'+ item.productImage" alt=""></a>
-                  </div>
-                  <div class="main">
-                    <div class="name">{{item.productName}}</div>
-                    <div class="price">{{'￥' + item.salePrice}}</div>
-                    <div class="btn-area">
-                      <a href="javascript:;" class="btn btn--m">加入购物车</a>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+                  <a href="javascript:void(0)" :class="{'cur':priceChecked===index}"
+                     @click="setPriceFilter(index)">{{item.startPrice}}-{{item.endPrice}}元</a>
+                </dd>
+              </dl>
             </div>
-            <!-- loading more -->
-            <div class="view-more-normal"
-                 v-infinite-scroll="loadMore"
-                 infinite-scroll-disabled="busy"
-                 infinite-scroll-distance="20">
-              <img src="./loading-svg/loading-spinning-bubbles.svg" v-show="loading">
+
+            <!-- search result accessories list -->
+            <div class="accessory-list-wrap">
+              <div class="accessory-list col-4">
+                <ul>
+                  <li
+                    v-for="item in goodsList"
+                    :key="item.id"
+                  >
+                    <div class="pic">
+                      <a href="#"><img v-lazy="'/static/img/'+ item.productImage" alt=""></a>
+                    </div>
+                    <div class="main">
+                      <div class="name">{{item.productName}}</div>
+                      <div class="price">{{item.salePrice | currency('￥')}}</div>
+                      <div class="btn-area">
+                        <a href="javascript:;" class="btn btn--m" @click="addCart(item.productId)">加入购物车</a>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <!-- loading more -->
+              <div class="view-more-normal"
+                   v-infinite-scroll="loadMore"
+                   infinite-scroll-disabled="busy"
+                   infinite-scroll-distance="20">
+                <img src="./loading-svg/loading-spinning-bubbles.svg" v-show="loading">
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
 </template>
 
 <script type="text/ecmascript-6">
   import axios from 'axios'
+  import header from '../../components/headder/header'
+  import bread from '../../components/bread/bread'
+  import {currency} from '../../util/currency'
 
   export default{
+    components: {
+      'v-header': header,
+      'v-bread': bread
+    },
     data () {
       return {
         goodsList: [],
@@ -102,11 +116,16 @@
         page: 1,
         pageSize: 8,
         priceChecked: 'all',
-        loading: false
+        loading: false,
+        mdShow: false,
+        mdShowCart: false
       }
     },
     mounted () {
-      this.getGoodsListData()
+      this.getGoodsListData();
+    },
+    filters: {
+      currency: currency
     },
     methods: {
       getGoodsListData (flag) {
@@ -159,6 +178,20 @@
         this.priceChecked = index;
         this.page = 1;
         this.getGoodsListData();
+      },
+      addCart (productId) {
+        axios.post('/goods/addCart', {
+          productId: productId
+        }).then((response) => {
+          var res = response.data;
+          console.log(res);
+          if (res.status === '0') {
+            this.mdShowCart = true;
+            this.$store.commit('updateCartCount', 1);
+          } else {
+            this.mdShow = true;
+          }
+        });
       }
     }
   }
